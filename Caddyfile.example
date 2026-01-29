@@ -1,0 +1,21 @@
+# Obsidian Web UI - Main interface
+obsidian.example.com {
+    reverse_proxy host.docker.internal:13443
+
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+# Obsidian REST API - For MCP server and external integrations
+obsidian-api.example.com {
+    reverse_proxy https://host.docker.internal:27124 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
