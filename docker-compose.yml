@@ -1,0 +1,85 @@
+services:
+  # Job scheduler for automated backups and maintenance
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: obsidian-ofelia
+    restart: unless-stopped
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      # Daily vault backup at 3:00 AM
+      ofelia.job-exec.backup.schedule: "0 3 * * *"
+      ofelia.job-exec.backup.container: "obsidian"
+      ofelia.job-exec.backup.command: "sh -c 'tar -czf /config/backups/vault-$(date +%Y%m%d-%H%M%S).tar.gz -C /vault .'"
+
+      # Cleanup old backups (keep last 7 days) at 4:00 AM
+      ofelia.job-exec.cleanup.schedule: "0 4 * * *"
+      ofelia.job-exec.cleanup.container: "obsidian"
+      ofelia.job-exec.cleanup.command: "sh -c 'find /config/backups -name \"vault-*.tar.gz\" -mtime +7 -delete'"
+
+      # Weekly restart at 4:00 AM Sunday for stability
+      ofelia.job-exec.restart.schedule: "0 4 * * 0"
+      ofelia.job-exec.restart.container: "obsidian"
+      ofelia.job-exec.restart.command: "sh -c 'echo Restart triggered'"
+
+  # Tailscale for secure network access
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: obsidian-tailscale
+    hostname: obsidian-docker
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--reset
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  # Caddy reverse proxy with automatic HTTPS
+  caddy:
+    image: slothcroissant/caddy-cloudflaredns:latest
+    container_name: obsidian-caddy
+    restart: unless-stopped
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+  # Main Obsidian application
+  obsidian:
+    image: lscr.io/linuxserver/obsidian:latest
+    container_name: obsidian
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+      - CUSTOM_USER=lucas
+      - PASSWORD=${OBSIDIAN_PASSWORD}
+      - SUBFOLDER=/
+      - TITLE=Obsidian
+    volumes:
+      - ./obsidian-config:/config
+      - ./vault:/vault
+    ports:
+      # Local access (HTTPS)
+      - "13443:3000"
+      # Local REST API access
+      - "27124:27124"
+    shm_size: "1gb"
+    depends_on:
+      - tailscale

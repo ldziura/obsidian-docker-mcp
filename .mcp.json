@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "uvx",
+      "args": ["mcp-obsidian"],
+      "env": {
+        "OBSIDIAN_API_KEY": "d4ae61ba8581446b1188df790b365efff3c5233144f7363b267d7e6d76044f03",
+        "OBSIDIAN_HOST": "obsidian-api.lucasdziura.art",
+        "OBSIDIAN_PORT": "443"
+      }
+    }
+  }
+}
