@@ -1,6 +1,9 @@
 # Environment files with secrets
 .env
 
+# MCP configuration (contains API keys)
+.mcp.json
+
 # Caddyfile (contains real domain names)
 Caddyfile
 
