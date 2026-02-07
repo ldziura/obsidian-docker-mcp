@@ -17,7 +17,9 @@
       "mcp__obsidian__obsidian_append_content",
       "mcp__obsidian__obsidian_simple_search",
       "mcp__obsidian__obsidian_patch_content",
-      "mcp__obsidian__obsidian_delete_file"
+      "mcp__obsidian__obsidian_delete_file",
+      "Bash(findstr:*)",
+      "mcp__obsidian__obsidian_batch_get_file_contents"
     ]
   },
   "enableAllProjectMcpServers": true,

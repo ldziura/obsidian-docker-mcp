@@ -109,3 +109,4 @@ Always reference `vault/CLAUDE.md` for Obsidian-specific formatting rules:
 - Include YAML frontmatter with `created`, `modified`, `tags`
 - Place new notes in `00_Inbox/` unless destination is clear
 - Use templates from `vault/templates/`
+- Before using `obsidian_patch_content`, read `vault/CLAUDE.md` for the required heading target format to avoid Error 40080

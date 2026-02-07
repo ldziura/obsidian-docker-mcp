@@ -3,7 +3,7 @@
 
 param(
     [string]$ApiKey = $env:OBSIDIAN_API_KEY,
-    [switch]$SetEnvVar,
+    [switch]$SkipEnvVar,
     [switch]$UseClaudeDesktop
 )
 
@@ -58,25 +58,12 @@ if (-not $ApiKey) {
     $ApiKey = Read-Host "Enter your Obsidian API key (or press Enter to use env var later)"
 }
 
-if ($SetEnvVar -and $ApiKey) {
+# Set environment variable by default when API key is provided (skip with -SkipEnvVar)
+if ($ApiKey -and -not $SkipEnvVar) {
     Write-Host "Setting OBSIDIAN_API_KEY environment variable..." -ForegroundColor Yellow
     [System.Environment]::SetEnvironmentVariable('OBSIDIAN_API_KEY', $ApiKey, 'User')
     $env:OBSIDIAN_API_KEY = $ApiKey
-    Write-Host "[OK] Environment variable set" -ForegroundColor Green
-}
-
-# Configuration content
-$mcpConfig = @{
-    obsidian = @{
-        command = "uvx"
-        args = @("mcp-obsidian")
-        env = @{
-            OBSIDIAN_API_KEY = if ($ApiKey) { $ApiKey } else { '${OBSIDIAN_API_KEY}' }
-            OBSIDIAN_HOST = "obsidian-api.lucasdziura.art"
-            OBSIDIAN_PORT = "443"
-            OBSIDIAN_HTTPS = "true"
-        }
-    }
+    Write-Host "[OK] Environment variable set (User scope)" -ForegroundColor Green
 }
 
 # Claude Code configuration
@@ -85,18 +72,36 @@ Write-Host "Configuring Claude Code..." -ForegroundColor Yellow
 
 $claudeJsonPath = Join-Path $env:USERPROFILE ".claude.json"
 
+# Build the obsidian MCP config as a PSCustomObject for JSON serialization
+$obsidianConfig = [PSCustomObject]@{
+    command = "uvx"
+    args = @("mcp-obsidian")
+    env = [PSCustomObject]@{
+        OBSIDIAN_API_KEY = if ($ApiKey) { $ApiKey } else { '${OBSIDIAN_API_KEY}' }
+        OBSIDIAN_HOST = "obsidian-api.lucasdziura.art"
+        OBSIDIAN_PORT = "443"
+        OBSIDIAN_HTTPS = "true"
+    }
+}
+
 if (Test-Path $claudeJsonPath) {
-    $existingConfig = Get-Content $claudeJsonPath -Raw | ConvertFrom-Json -AsHashtable
+    $existingConfig = Get-Content $claudeJsonPath -Raw | ConvertFrom-Json
 
     if (-not $existingConfig.mcpServers) {
-        $existingConfig.mcpServers = @{}
+        $existingConfig | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
     }
-    $existingConfig.mcpServers.obsidian = $mcpConfig.obsidian
+
+    # Add or update the obsidian property
+    if ($existingConfig.mcpServers.PSObject.Properties["obsidian"]) {
+        $existingConfig.mcpServers.obsidian = $obsidianConfig
+    } else {
+        $existingConfig.mcpServers | Add-Member -NotePropertyName "obsidian" -NotePropertyValue $obsidianConfig
+    }
 
     $existingConfig | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
     Write-Host "[OK] Updated $claudeJsonPath" -ForegroundColor Green
 } else {
-    @{ mcpServers = $mcpConfig } | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
+    [PSCustomObject]@{ mcpServers = [PSCustomObject]@{ obsidian = $obsidianConfig } } | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
     Write-Host "[OK] Created $claudeJsonPath" -ForegroundColor Green
 }
 
@@ -113,17 +118,40 @@ if ($UseClaudeDesktop) {
     }
 
     if (Test-Path $claudeDesktopPath) {
-        $desktopConfig = Get-Content $claudeDesktopPath -Raw | ConvertFrom-Json -AsHashtable
+        $desktopConfig = Get-Content $claudeDesktopPath -Raw | ConvertFrom-Json
         if (-not $desktopConfig.mcpServers) {
-            $desktopConfig.mcpServers = @{}
+            $desktopConfig | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
         }
-        $desktopConfig.mcpServers.obsidian = $mcpConfig.obsidian
+
+        if ($desktopConfig.mcpServers.PSObject.Properties["obsidian"]) {
+            $desktopConfig.mcpServers.obsidian = $obsidianConfig
+        } else {
+            $desktopConfig.mcpServers | Add-Member -NotePropertyName "obsidian" -NotePropertyValue $obsidianConfig
+        }
         $desktopConfig | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
     } else {
-        @{ mcpServers = $mcpConfig } | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
+        [PSCustomObject]@{ mcpServers = [PSCustomObject]@{ obsidian = $obsidianConfig } } | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
     }
     Write-Host "[OK] Updated $claudeDesktopPath" -ForegroundColor Green
     Write-Host "[INFO] Restart Claude Desktop to apply changes" -ForegroundColor Yellow
+}
+
+# Install /obsidian skill
+Write-Host ""
+Write-Host "Installing /obsidian skill..." -ForegroundColor Yellow
+
+$skillSource = Join-Path $PSScriptRoot "..\skills\obsidian\SKILL.md"
+$skillDestDir = Join-Path $env:USERPROFILE ".claude\skills\obsidian"
+$skillDest = Join-Path $skillDestDir "SKILL.md"
+
+if (Test-Path $skillSource) {
+    if (-not (Test-Path $skillDestDir)) {
+        New-Item -ItemType Directory -Path $skillDestDir -Force | Out-Null
+    }
+    Copy-Item -Path $skillSource -Destination $skillDest -Force
+    Write-Host "[OK] Installed /obsidian skill to $skillDest" -ForegroundColor Green
+} else {
+    Write-Host "[WARN] Skill file not found at $skillSource - skipping skill install" -ForegroundColor Yellow
 }
 
 # Summary
@@ -136,12 +164,13 @@ Write-Host "Configuration:" -ForegroundColor White
 Write-Host "  Host: obsidian-api.lucasdziura.art" -ForegroundColor Gray
 Write-Host "  Port: 443 (HTTPS)" -ForegroundColor Gray
 Write-Host "  MCP Package: mcp-obsidian (via uvx)" -ForegroundColor Gray
+Write-Host "  Skill: /obsidian (folder reader)" -ForegroundColor Gray
 Write-Host ""
 
 if (-not $ApiKey -and -not $env:OBSIDIAN_API_KEY) {
     Write-Host "IMPORTANT: Set your API key before using:" -ForegroundColor Yellow
-    Write-Host '  $env:OBSIDIAN_API_KEY = "your_api_key_here"' -ForegroundColor White
-    Write-Host "  Or run this script with: -ApiKey 'your_key' -SetEnvVar" -ForegroundColor White
+    Write-Host "  Run this script with: -ApiKey 'your_key'" -ForegroundColor White
+    Write-Host "  (Environment variable will be set automatically)" -ForegroundColor White
     Write-Host ""
 }
 
