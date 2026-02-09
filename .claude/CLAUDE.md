@@ -10,7 +10,7 @@ Self-hosted Obsidian stack providing browser-accessible Obsidian with secure rem
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Docker Compose Stack                      │
+│                    Docker Compose Stack                     │
 ├─────────────────────────────────────────────────────────────┤
 │  ofelia          - Scheduled jobs (backups, restarts)       │
 │  tailscale       - Secure network access (VPN)              │
@@ -61,6 +61,8 @@ docker exec -it obsidian bash
 | `vault/` | Obsidian vault (PARA structure) |
 | `vault/CLAUDE.md` | Vault-specific context for working with notes |
 | `obsidian-config/` | Obsidian app config and backups |
+| `skills/obsidian/SKILL.md` | `/obsidian <folder>` skill for loading vault folders |
+| `scripts/` | Setup scripts for MCP server installation (`.sh`, `.ps1`) |
 
 ## Scheduled Jobs (Ofelia)
 
@@ -84,7 +86,7 @@ Optional R2 config (used by Remotely Save plugin, not Docker):
 
 - Web UI: `https://obsidian.lucasdziura.art` (via Tailscale)
 - REST API: `https://obsidian-api.lucasdziura.art` (for MCP server)
-- Local HTTPS: `http://localhost:13443`
+- Local HTTP: `http://localhost:13443` (KasmVNC web UI)
 - Local REST API: `http://localhost:27124`
 
 ## Vault Structure (PARA Method)
@@ -101,6 +103,11 @@ vault/
 ├── daily/          # Daily notes (YYYY-MM-DD.md)
 └── templates/      # Templater templates
 ```
+
+## Development Environment
+
+- **Platform:** Windows — use `ls` (Git Bash) not `dir`, and forward slashes in paths
+- **Shell:** Git Bash via Claude Code — most Unix commands work, but not `dir /b` or other CMD-specific syntax
 
 ## When Editing Vault Notes
 

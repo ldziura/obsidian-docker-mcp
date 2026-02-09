@@ -19,7 +19,20 @@
       "mcp__obsidian__obsidian_patch_content",
       "mcp__obsidian__obsidian_delete_file",
       "Bash(findstr:*)",
-      "mcp__obsidian__obsidian_batch_get_file_contents"
+      "mcp__obsidian__obsidian_batch_get_file_contents",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" status)",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" diff)",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" log --oneline -5)",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" remote -v)",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" branch -a)",
+      "Bash(git -C \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\" push origin master:main)",
+      "Bash(docker stop:*)",
+      "Bash(docker start:*)",
+      "Bash(python:*)",
+      "Bash(start \"\" \"W:\\\\PersonalProjects\\\\self-hosted-stack\\\\obsidian-docker\\\\button-playground.html\")",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
