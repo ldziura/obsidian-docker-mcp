@@ -16,6 +16,12 @@ caddy-config/
 # Vault contents (sync separately via R2)
 vault/
 
+# Python virtual environments
+.venv/
+
+# Build artifacts
+*.zip
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -23,3 +29,4 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+/vault-backup-prereorg-20260226/

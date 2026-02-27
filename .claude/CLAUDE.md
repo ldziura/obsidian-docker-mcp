@@ -63,6 +63,8 @@ docker exec -it obsidian bash
 | `obsidian-config/` | Obsidian app config and backups |
 | `skills/obsidian/SKILL.md` | `/obsidian <folder>` skill for loading vault folders |
 | `scripts/` | Setup scripts for MCP server installation (`.sh`, `.ps1`) |
+| `mcp-servers/obsidian-canvas/` | Canvas MCP server (local Python package) |
+| `.mcp.json` | MCP server configuration (obsidian + obsidian-canvas) |
 
 ## Scheduled Jobs (Ofelia)
 

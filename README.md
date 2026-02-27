@@ -151,10 +151,22 @@ Add to `~/.claude.json`:
         "OBSIDIAN_PORT": "443",
         "OBSIDIAN_HTTPS": "true"
       }
+    },
+    "obsidian-canvas": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/obsidian-docker/mcp-servers/obsidian-canvas", "run", "obsidian-canvas-mcp"],
+      "env": {
+        "OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}",
+        "OBSIDIAN_HOST": "obsidian-api.yourdomain.com",
+        "OBSIDIAN_PORT": "443",
+        "OBSIDIAN_HTTPS": "true"
+      }
     }
   }
 }
 ```
+
+> **Note:** `obsidian-canvas-mcp` is a local package included in this repo. Replace `/path/to/obsidian-docker` with the actual path to your clone. The setup scripts handle this automatically.
 
 ### Getting the API Key
 
@@ -163,6 +175,8 @@ Add to `~/.claude.json`:
 3. Copy or generate an API Key
 
 ### Available MCP Tools
+
+**Obsidian Notes** (`mcp-obsidian`):
 
 | Tool | Description |
 |------|-------------|
@@ -173,6 +187,19 @@ Add to `~/.claude.json`:
 | `append_content` | Add content to a note |
 | `patch_content` | Insert content at a specific location |
 | `delete_file` | Delete a note |
+
+**Obsidian Canvas** (`obsidian-canvas-mcp`):
+
+| Tool | Description |
+|------|-------------|
+| `list_canvases` | List all `.canvas` files in the vault |
+| `create_canvas` | Create a new canvas file |
+| `read_canvas` | Read canvas structure (nodes and edges) |
+| `add_node` | Add a node (text, file, link, or group) |
+| `update_node` | Update an existing node's properties |
+| `remove_node` | Remove a node and its connected edges |
+| `add_edge` | Connect two nodes with an edge |
+| `remove_edge` | Remove an edge connection |
 
 ## Directory Structure
 
@@ -185,6 +212,12 @@ obsidian-docker/
 ├── scripts/
 │   ├── setup-obsidian-mcp.ps1   # Windows MCP setup
 │   └── setup-obsidian-mcp.sh    # Linux/macOS MCP setup
+├── mcp-servers/
+│   └── obsidian-canvas/    # Canvas MCP server (local Python package)
+│       ├── pyproject.toml
+│       └── src/obsidian_canvas/
+├── skills/
+│   └── obsidian/           # /obsidian skill for Claude Code
 ├── vault/                  # Your Obsidian vault (gitignored)
 ├── obsidian-config/        # Obsidian app config (gitignored)
 ├── tailscale-state/        # Tailscale auth state (gitignored)

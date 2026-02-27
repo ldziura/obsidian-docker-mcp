@@ -72,15 +72,38 @@ Write-Host "Configuring Claude Code..." -ForegroundColor Yellow
 
 $claudeJsonPath = Join-Path $env:USERPROFILE ".claude.json"
 
+# Resolve the repo root (scripts/ is one level down)
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$canvasServerDir = Join-Path $repoRoot "mcp-servers\obsidian-canvas"
+
+# Build shared env config
+$envConfig = [PSCustomObject]@{
+    OBSIDIAN_API_KEY = if ($ApiKey) { $ApiKey } else { '${OBSIDIAN_API_KEY}' }
+    OBSIDIAN_HOST = "obsidian-api.lucasdziura.art"
+    OBSIDIAN_PORT = "443"
+    OBSIDIAN_HTTPS = "true"
+}
+
 # Build the obsidian MCP config as a PSCustomObject for JSON serialization
 $obsidianConfig = [PSCustomObject]@{
     command = "uvx"
     args = @("mcp-obsidian")
-    env = [PSCustomObject]@{
-        OBSIDIAN_API_KEY = if ($ApiKey) { $ApiKey } else { '${OBSIDIAN_API_KEY}' }
-        OBSIDIAN_HOST = "obsidian-api.lucasdziura.art"
-        OBSIDIAN_PORT = "443"
-        OBSIDIAN_HTTPS = "true"
+    env = $envConfig
+}
+
+# Build the obsidian-canvas MCP config (local package, uses uv --directory)
+$canvasConfig = [PSCustomObject]@{
+    command = "uv"
+    args = @("--directory", $canvasServerDir, "run", "obsidian-canvas-mcp")
+    env = $envConfig
+}
+
+# Helper function to add or update an MCP server entry
+function Set-McpServer($config, $name, $value) {
+    if ($config.mcpServers.PSObject.Properties[$name]) {
+        $config.mcpServers.$name = $value
+    } else {
+        $config.mcpServers | Add-Member -NotePropertyName $name -NotePropertyValue $value
     }
 }
 
@@ -91,17 +114,18 @@ if (Test-Path $claudeJsonPath) {
         $existingConfig | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
     }
 
-    # Add or update the obsidian property
-    if ($existingConfig.mcpServers.PSObject.Properties["obsidian"]) {
-        $existingConfig.mcpServers.obsidian = $obsidianConfig
-    } else {
-        $existingConfig.mcpServers | Add-Member -NotePropertyName "obsidian" -NotePropertyValue $obsidianConfig
-    }
+    Set-McpServer $existingConfig "obsidian" $obsidianConfig
+    Set-McpServer $existingConfig "obsidian-canvas" $canvasConfig
 
     $existingConfig | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
     Write-Host "[OK] Updated $claudeJsonPath" -ForegroundColor Green
 } else {
-    [PSCustomObject]@{ mcpServers = [PSCustomObject]@{ obsidian = $obsidianConfig } } | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
+    [PSCustomObject]@{
+        mcpServers = [PSCustomObject]@{
+            obsidian = $obsidianConfig
+            "obsidian-canvas" = $canvasConfig
+        }
+    } | ConvertTo-Json -Depth 10 | Set-Content $claudeJsonPath -Encoding UTF8
     Write-Host "[OK] Created $claudeJsonPath" -ForegroundColor Green
 }
 
@@ -123,17 +147,38 @@ if ($UseClaudeDesktop) {
             $desktopConfig | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
         }
 
-        if ($desktopConfig.mcpServers.PSObject.Properties["obsidian"]) {
-            $desktopConfig.mcpServers.obsidian = $obsidianConfig
-        } else {
-            $desktopConfig.mcpServers | Add-Member -NotePropertyName "obsidian" -NotePropertyValue $obsidianConfig
-        }
+        Set-McpServer $desktopConfig "obsidian" $obsidianConfig
+        Set-McpServer $desktopConfig "obsidian-canvas" $canvasConfig
+
         $desktopConfig | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
     } else {
-        [PSCustomObject]@{ mcpServers = [PSCustomObject]@{ obsidian = $obsidianConfig } } | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
+        [PSCustomObject]@{
+            mcpServers = [PSCustomObject]@{
+                obsidian = $obsidianConfig
+                "obsidian-canvas" = $canvasConfig
+            }
+        } | ConvertTo-Json -Depth 10 | Set-Content $claudeDesktopPath -Encoding UTF8
     }
     Write-Host "[OK] Updated $claudeDesktopPath" -ForegroundColor Green
     Write-Host "[INFO] Restart Claude Desktop to apply changes" -ForegroundColor Yellow
+}
+
+# Install obsidian-canvas-mcp dependencies
+Write-Host ""
+Write-Host "Installing obsidian-canvas-mcp dependencies..." -ForegroundColor Yellow
+
+if (Test-Path $canvasServerDir) {
+    try {
+        Push-Location $canvasServerDir
+        & uv sync 2>&1 | Out-Null
+        Pop-Location
+        Write-Host "[OK] obsidian-canvas-mcp dependencies installed" -ForegroundColor Green
+    } catch {
+        Pop-Location
+        Write-Host "[WARN] Failed to install canvas MCP dependencies: $_" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[WARN] Canvas MCP server not found at $canvasServerDir" -ForegroundColor Yellow
 }
 
 # Install /obsidian skill
@@ -163,8 +208,15 @@ Write-Host ""
 Write-Host "Configuration:" -ForegroundColor White
 Write-Host "  Host: obsidian-api.lucasdziura.art" -ForegroundColor Gray
 Write-Host "  Port: 443 (HTTPS)" -ForegroundColor Gray
-Write-Host "  MCP Package: mcp-obsidian (via uvx)" -ForegroundColor Gray
+Write-Host "  MCP Servers:" -ForegroundColor Gray
+Write-Host "    - obsidian (notes, search, files via uvx)" -ForegroundColor Gray
+Write-Host "    - obsidian-canvas (canvas operations via local package)" -ForegroundColor Gray
 Write-Host "  Skill: /obsidian (folder reader)" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Chat tab skill:" -ForegroundColor White
+Write-Host "    To use Obsidian in Claude Desktop's Chat tab:" -ForegroundColor Gray
+Write-Host "    1. ZIP the skills/obsidian-chat/ folder" -ForegroundColor Gray
+Write-Host "    2. Upload via Claude Desktop > Customize > Skills" -ForegroundColor Gray
 Write-Host ""
 
 if (-not $ApiKey -and -not $env:OBSIDIAN_API_KEY) {

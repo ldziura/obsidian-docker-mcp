@@ -118,6 +118,11 @@ if [ "$SET_ENV_VAR" = true ] && [ -n "$API_KEY" ]; then
     fi
 fi
 
+# Resolve the repo root (scripts/ is one level down)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CANVAS_SERVER_DIR="$REPO_ROOT/mcp-servers/obsidian-canvas"
+
 # Generate config JSON
 if [ -n "$API_KEY" ]; then
     API_KEY_VALUE="$API_KEY"
@@ -130,6 +135,16 @@ MCP_CONFIG=$(cat << EOF
   "obsidian": {
     "command": "uvx",
     "args": ["mcp-obsidian"],
+    "env": {
+      "OBSIDIAN_API_KEY": "$API_KEY_VALUE",
+      "OBSIDIAN_HOST": "obsidian-api.lucasdziura.art",
+      "OBSIDIAN_PORT": "443",
+      "OBSIDIAN_HTTPS": "true"
+    }
+  },
+  "obsidian-canvas": {
+    "command": "uv",
+    "args": ["--directory", "$CANVAS_SERVER_DIR", "run", "obsidian-canvas-mcp"],
     "env": {
       "OBSIDIAN_API_KEY": "$API_KEY_VALUE",
       "OBSIDIAN_HOST": "obsidian-api.lucasdziura.art",
@@ -224,6 +239,20 @@ PYEOF
     echo -e "${YELLOW}[INFO] Restart Claude Desktop to apply changes${NC}"
 fi
 
+# Install obsidian-canvas-mcp dependencies
+echo ""
+echo -e "${YELLOW}Installing obsidian-canvas-mcp dependencies...${NC}"
+
+if [ -d "$CANVAS_SERVER_DIR" ]; then
+    if (cd "$CANVAS_SERVER_DIR" && uv sync > /dev/null 2>&1); then
+        echo -e "${GREEN}[OK] obsidian-canvas-mcp dependencies installed${NC}"
+    else
+        echo -e "${YELLOW}[WARN] Failed to install canvas MCP dependencies${NC}"
+    fi
+else
+    echo -e "${YELLOW}[WARN] Canvas MCP server not found at $CANVAS_SERVER_DIR${NC}"
+fi
+
 # Summary
 echo ""
 echo -e "${CYAN}=====================================${NC}"
@@ -233,7 +262,14 @@ echo ""
 echo -e "Configuration:"
 echo -e "  Host: obsidian-api.lucasdziura.art"
 echo -e "  Port: 443 (HTTPS)"
-echo -e "  MCP Package: mcp-obsidian (via uvx)"
+echo -e "  MCP Servers:"
+echo -e "    - obsidian (notes, search, files via uvx)"
+echo -e "    - obsidian-canvas (canvas operations via local package)"
+echo ""
+echo -e "  Chat tab skill:"
+echo -e "    To use Obsidian in Claude Desktop's Chat tab:"
+echo -e "    1. ZIP the skills/obsidian-chat/ folder"
+echo -e "    2. Upload via Claude Desktop > Customize > Skills"
 echo ""
 
 if [ -z "$API_KEY" ] && [ -z "$OBSIDIAN_API_KEY" ]; then
