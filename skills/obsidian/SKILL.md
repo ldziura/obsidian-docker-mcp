@@ -9,9 +9,10 @@ allowed-tools: mcp__obsidian__obsidian_get_file_contents, mcp__obsidian__obsidia
 
 You are working with an Obsidian vault via the Obsidian MCP server.
 
-## Step 1: Load vault instructions
+## Step 1: Load vault instructions and writing style
 
-Use `obsidian_get_file_contents` to read `CLAUDE.md` from the vault root. This file contains critical instructions about vault structure, formatting rules, and how to use tools like `obsidian_patch_content`. You MUST follow all instructions in that file for any vault operations.
+1. Use `obsidian_get_file_contents` to read `CLAUDE.md` from the vault root. This file contains critical instructions about vault structure, formatting rules, and how to use tools like `obsidian_patch_content`. You MUST follow all instructions in that file for any vault operations.
+2. Use `obsidian_get_file_contents` to read `03_Resources/Claude Writing Instructions.md`. This file contains the user's preferred writing style, lexicon, and syntax. You MUST follow these writing instructions whenever creating or editing any content in the vault.
 
 ## Step 2: Parse the arguments
 

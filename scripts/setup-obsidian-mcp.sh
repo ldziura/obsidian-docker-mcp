@@ -253,6 +253,22 @@ else
     echo -e "${YELLOW}[WARN] Canvas MCP server not found at $CANVAS_SERVER_DIR${NC}"
 fi
 
+# Install /obsidian skill
+echo ""
+echo -e "${YELLOW}Installing /obsidian skill...${NC}"
+
+SKILL_SOURCE="$REPO_ROOT/skills/obsidian/SKILL.md"
+SKILL_DEST_DIR="$HOME/.claude/skills/obsidian"
+SKILL_DEST="$SKILL_DEST_DIR/SKILL.md"
+
+if [ -f "$SKILL_SOURCE" ]; then
+    mkdir -p "$SKILL_DEST_DIR"
+    cp "$SKILL_SOURCE" "$SKILL_DEST"
+    echo -e "${GREEN}[OK] Installed /obsidian skill to $SKILL_DEST${NC}"
+else
+    echo -e "${YELLOW}[WARN] Skill file not found at $SKILL_SOURCE - skipping skill install${NC}"
+fi
+
 # Summary
 echo ""
 echo -e "${CYAN}=====================================${NC}"
