@@ -1,10 +1,11 @@
-# Obsidian MCP Server Setup for Claude Code (Windows)
+# Obsidian MCP Server Setup for Claude (Windows)
 # Run this script in PowerShell to configure the Obsidian MCP server
+# Configures both Claude Code and Claude Desktop by default
 
 param(
     [string]$ApiKey = $env:OBSIDIAN_API_KEY,
     [switch]$SkipEnvVar,
-    [switch]$UseClaudeDesktop
+    [switch]$SkipClaudeDesktop
 )
 
 $Host.UI.RawUI.WindowTitle = "Obsidian MCP Setup"
@@ -84,16 +85,20 @@ $envConfig = [PSCustomObject]@{
     OBSIDIAN_HTTPS = "true"
 }
 
+# Resolve full paths (Claude Desktop doesn't inherit shell PATH)
+$uvxFullPath = (Get-Command uvx -ErrorAction SilentlyContinue).Source
+$uvFullPath = (Get-Command uv -ErrorAction SilentlyContinue).Source
+
 # Build the obsidian MCP config as a PSCustomObject for JSON serialization
 $obsidianConfig = [PSCustomObject]@{
-    command = "uvx"
-    args = @("mcp-obsidian")
+    command = $uvxFullPath
+    args = @("--from", "mcp-obsidian==0.2.1", "mcp-obsidian")
     env = $envConfig
 }
 
 # Build the obsidian-canvas MCP config (local package, uses uv --directory)
 $canvasConfig = [PSCustomObject]@{
-    command = "uv"
+    command = $uvFullPath
     args = @("--directory", $canvasServerDir, "run", "obsidian-canvas-mcp")
     env = $envConfig
 }
@@ -129,17 +134,29 @@ if (Test-Path $claudeJsonPath) {
     Write-Host "[OK] Created $claudeJsonPath" -ForegroundColor Green
 }
 
-# Claude Desktop configuration (optional)
-if ($UseClaudeDesktop) {
+# Claude Desktop configuration (default, skip with -SkipClaudeDesktop)
+if (-not $SkipClaudeDesktop) {
     Write-Host ""
     Write-Host "Configuring Claude Desktop..." -ForegroundColor Yellow
 
-    $claudeDesktopPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
-    $claudeDesktopDir = Split-Path $claudeDesktopPath -Parent
+    # Detect config path: Microsoft Store vs standard installer
+    $storeConfigDir = Join-Path $env:LOCALAPPDATA "Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude"
+    $standardConfigDir = Join-Path $env:APPDATA "Claude"
 
-    if (-not (Test-Path $claudeDesktopDir)) {
+    if (Test-Path $storeConfigDir) {
+        $claudeDesktopDir = $storeConfigDir
+        Write-Host "[INFO] Detected Microsoft Store installation" -ForegroundColor Cyan
+    } elseif (Test-Path $standardConfigDir) {
+        $claudeDesktopDir = $standardConfigDir
+        Write-Host "[INFO] Detected standard installation" -ForegroundColor Cyan
+    } else {
+        # Default to standard path and create it
+        $claudeDesktopDir = $standardConfigDir
         New-Item -ItemType Directory -Path $claudeDesktopDir -Force | Out-Null
+        Write-Host "[INFO] Created config directory at standard path" -ForegroundColor Cyan
     }
+
+    $claudeDesktopPath = Join-Path $claudeDesktopDir "claude_desktop_config.json"
 
     if (Test-Path $claudeDesktopPath) {
         $desktopConfig = Get-Content $claudeDesktopPath -Raw | ConvertFrom-Json

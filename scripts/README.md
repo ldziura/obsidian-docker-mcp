@@ -19,14 +19,14 @@ Scripts for configuring and maintaining the Obsidian Docker stack.
 ### Windows (PowerShell)
 
 ```powershell
-# Basic setup (will prompt for API key)
+# Basic setup (will prompt for API key, configures both Claude Code and Desktop)
 .\setup-obsidian-mcp.ps1
 
 # With API key and save to environment variable
-.\setup-obsidian-mcp.ps1 -ApiKey "your_api_key" -SetEnvVar
+.\setup-obsidian-mcp.ps1 -ApiKey "your_api_key"
 
-# Also configure Claude Desktop
-.\setup-obsidian-mcp.ps1 -ApiKey "your_api_key" -SetEnvVar -UseClaudeDesktop
+# Skip Claude Desktop configuration
+.\setup-obsidian-mcp.ps1 -ApiKey "your_api_key" -SkipClaudeDesktop
 ```
 
 ### Linux/macOS (Bash)
@@ -35,14 +35,14 @@ Scripts for configuring and maintaining the Obsidian Docker stack.
 # Make executable
 chmod +x setup-obsidian-mcp.sh
 
-# Basic setup (will prompt for API key)
+# Basic setup (will prompt for API key, configures both Claude Code and Desktop)
 ./setup-obsidian-mcp.sh
 
 # With API key and save to shell rc file
 ./setup-obsidian-mcp.sh --api-key "your_api_key" --set-env
 
-# Also configure Claude Desktop
-./setup-obsidian-mcp.sh --api-key "your_api_key" --set-env --claude-desktop
+# Skip Claude Desktop configuration
+./setup-obsidian-mcp.sh --api-key "your_api_key" --skip-claude-desktop
 ```
 
 ## Manual Configuration
@@ -56,7 +56,7 @@ If you prefer manual setup, add this to your configuration files:
   "mcpServers": {
     "obsidian": {
       "command": "uvx",
-      "args": ["mcp-obsidian"],
+      "args": ["--from", "mcp-obsidian==0.2.1", "mcp-obsidian"],
       "env": {
         "OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}",
         "OBSIDIAN_HOST": "obsidian-api.lucasdziura.art",
@@ -82,7 +82,8 @@ If you prefer manual setup, add this to your configuration files:
 
 ### Claude Desktop
 
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+**Windows (standard):** `%APPDATA%\Claude\claude_desktop_config.json`
+**Windows (Store):** `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Linux:** `~/.config/Claude/claude_desktop_config.json`
 
@@ -149,7 +150,7 @@ Once connected, Claude has access to two MCP servers:
 - Ensure uvx is installed: `uvx --version`
 - Test manually:
   ```bash
-  OBSIDIAN_API_KEY="your_key" OBSIDIAN_HOST="obsidian-api.lucasdziura.art" OBSIDIAN_PORT="443" OBSIDIAN_HTTPS="true" uvx mcp-obsidian
+  OBSIDIAN_API_KEY="your_key" OBSIDIAN_HOST="obsidian-api.lucasdziura.art" OBSIDIAN_PORT="443" OBSIDIAN_HTTPS="true" uvx --from "mcp-obsidian==0.2.1" mcp-obsidian
   ```
 
 ## Architecture
