@@ -1,6 +1,7 @@
 #!/bin/bash
-# Obsidian MCP Server Setup for Claude Code (Linux/macOS)
+# Obsidian MCP Server Setup for Claude (Linux/macOS)
 # Run this script to configure the Obsidian MCP server
+# Configures both Claude Code and Claude Desktop by default
 
 set -e
 
@@ -19,7 +20,7 @@ echo ""
 # Parse arguments
 API_KEY="${OBSIDIAN_API_KEY:-}"
 SET_ENV_VAR=false
-USE_CLAUDE_DESKTOP=false
+SKIP_CLAUDE_DESKTOP=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -31,8 +32,8 @@ while [[ $# -gt 0 ]]; do
             SET_ENV_VAR=true
             shift
             ;;
-        --claude-desktop)
-            USE_CLAUDE_DESKTOP=true
+        --skip-claude-desktop)
+            SKIP_CLAUDE_DESKTOP=true
             shift
             ;;
         *)
@@ -123,6 +124,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CANVAS_SERVER_DIR="$REPO_ROOT/mcp-servers/obsidian-canvas"
 
+# Resolve full paths (Claude Desktop doesn't inherit shell PATH)
+UVX_FULL_PATH="$(which uvx 2>/dev/null || echo "uvx")"
+UV_FULL_PATH="$(which uv 2>/dev/null || echo "uv")"
+
 # Generate config JSON
 if [ -n "$API_KEY" ]; then
     API_KEY_VALUE="$API_KEY"
@@ -133,8 +138,8 @@ fi
 MCP_CONFIG=$(cat << EOF
 {
   "obsidian": {
-    "command": "uvx",
-    "args": ["mcp-obsidian"],
+    "command": "$UVX_FULL_PATH",
+    "args": ["--from", "mcp-obsidian==0.2.1", "mcp-obsidian"],
     "env": {
       "OBSIDIAN_API_KEY": "$API_KEY_VALUE",
       "OBSIDIAN_HOST": "obsidian-api.lucasdziura.art",
@@ -143,7 +148,7 @@ MCP_CONFIG=$(cat << EOF
     }
   },
   "obsidian-canvas": {
-    "command": "uv",
+    "command": "$UV_FULL_PATH",
     "args": ["--directory", "$CANVAS_SERVER_DIR", "run", "obsidian-canvas-mcp"],
     "env": {
       "OBSIDIAN_API_KEY": "$API_KEY_VALUE",
@@ -194,8 +199,8 @@ else
     echo -e "${GREEN}[OK] Created $CLAUDE_JSON${NC}"
 fi
 
-# Claude Desktop configuration (optional)
-if [ "$USE_CLAUDE_DESKTOP" = true ]; then
+# Claude Desktop configuration (default, skip with --skip-claude-desktop)
+if [ "$SKIP_CLAUDE_DESKTOP" = false ]; then
     echo ""
     echo -e "${YELLOW}Configuring Claude Desktop...${NC}"
 
@@ -251,6 +256,22 @@ if [ -d "$CANVAS_SERVER_DIR" ]; then
     fi
 else
     echo -e "${YELLOW}[WARN] Canvas MCP server not found at $CANVAS_SERVER_DIR${NC}"
+fi
+
+# Install /obsidian skill
+echo ""
+echo -e "${YELLOW}Installing /obsidian skill...${NC}"
+
+SKILL_SOURCE="$REPO_ROOT/skills/obsidian/SKILL.md"
+SKILL_DEST_DIR="$HOME/.claude/skills/obsidian"
+SKILL_DEST="$SKILL_DEST_DIR/SKILL.md"
+
+if [ -f "$SKILL_SOURCE" ]; then
+    mkdir -p "$SKILL_DEST_DIR"
+    cp "$SKILL_SOURCE" "$SKILL_DEST"
+    echo -e "${GREEN}[OK] Installed /obsidian skill to $SKILL_DEST${NC}"
+else
+    echo -e "${YELLOW}[WARN] Skill file not found at $SKILL_SOURCE - skipping skill install${NC}"
 fi
 
 # Summary
