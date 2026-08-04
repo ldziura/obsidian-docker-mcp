@@ -4,24 +4,31 @@ services:
     image: mcuadros/ofelia:latest
     container_name: obsidian-ofelia
     restart: unless-stopped
-    command: daemon --docker
+    # Scoped to this project only (2026-08-04) — an unfiltered `daemon --docker`
+    # adopts ofelia.* labels from EVERY container on the box (the cross-daemon
+    # adoption bug fixed on anki/paperless 2026-08-02).
+    command: daemon --docker --docker-filter label=com.docker.compose.project=obsidian-docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
-      # Daily vault backup at 3:00 AM
-      ofelia.job-exec.backup.schedule: "0 3 * * *"
+      # NOTE: this ofelia parses SIX-field cron (seconds first). The old 5-field
+      # "0 3 * * *" was read as sec=0 min=3 every hour -> the "daily" backup ran
+      # hourly at :03 for months (fixed 2026-08-04, same class as anki/paperless).
+
+      # Daily vault backup at 03:00
+      ofelia.job-exec.backup.schedule: "0 0 3 * * *"
       ofelia.job-exec.backup.container: "obsidian"
       ofelia.job-exec.backup.command: "sh -c 'tar -czf /config/backups/vault-$(date +%Y%m%d-%H%M%S).tar.gz -C /vault .'"
 
-      # Cleanup old backups (keep last 7 days) at 4:00 AM
-      ofelia.job-exec.cleanup.schedule: "0 4 * * *"
+      # Cleanup old backups (keep last 7 days) at 04:00
+      ofelia.job-exec.cleanup.schedule: "0 0 4 * * *"
       ofelia.job-exec.cleanup.container: "obsidian"
       ofelia.job-exec.cleanup.command: "sh -c 'find /config/backups -name \"vault-*.tar.gz\" -mtime +7 -delete'"
 
-      # Weekly restart at 4:00 AM Sunday for stability
-      ofelia.job-exec.restart.schedule: "0 4 * * 0"
-      ofelia.job-exec.restart.container: "obsidian"
-      ofelia.job-exec.restart.command: "sh -c 'echo Restart triggered'"
+      # Weekly-restart job REMOVED 2026-08-04: it had been a no-op stub since
+      # creation (command was `echo Restart triggered` — job-exec cannot restart
+      # its own target container). If a real weekly Electron-memory restart is
+      # ever wanted, implement as a job-run with a docker-cli image + socket.
 
   # Tailscale for secure network access
   tailscale:
@@ -65,8 +72,8 @@ services:
     security_opt:
       - seccomp:unconfined
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=0
+      - PGID=0
       - TZ=America/Chicago
       - CUSTOM_USER=lucas
       - PASSWORD=${OBSIDIAN_PASSWORD}
