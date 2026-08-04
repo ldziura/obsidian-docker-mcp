@@ -51,7 +51,19 @@
       "Bash(find:*)",
       "WebFetch(domain:support.claude.com)",
       "WebFetch(domain:www.anthropic.com)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cp:*)",
+      "mcp__obsidian-canvas__add_node",
+      "mcp__obsidian-canvas__add_edge",
+      "mcp__obsidian-canvas__update_node",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/$APPDATA/Claude/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/$APPDATA/Claude/logs/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/$LOCALAPPDATA/Claude/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/$APPDATA/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/$LOCALAPPDATA/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/Local/**)",
+      "Read(//d/PythonProjects/obsidian-docker-mcp/**)",
+      "Bash(where.exe claude)"
     ]
   },
   "enableAllProjectMcpServers": true,
